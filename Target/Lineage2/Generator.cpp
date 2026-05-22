@@ -71,7 +71,7 @@ public:
 			PredefinedMethod::Inline(R"(	void ProcessEvent(class UFunction* function, void* parms)
 	{
 		static auto processEvent = reinterpret_cast<void(__thiscall*)(void*, class UFunction*, void*, void*)>(
-			GetProcAddress(GetModuleHandleW(L\"Core.dll\"), \"?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z\"));
+			GetProcAddress(GetModuleHandleW(L"Core.dll"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z"));
 		processEvent(this, function, parms, nullptr);
 	})"),
 			PredefinedMethod::Default("static TArray<UObject*>& GetGlobalObjects()", R"(TArray<UObject*>& UObject::GetGlobalObjects()
@@ -91,11 +91,11 @@ public:
 		std::string temp;
 		for (auto p = Outer; p; p = p->Outer)
 		{
-			temp = p->GetName() + \".\" + temp;
+			temp = p->GetName() + "." + temp;
 		}
 
 		name = Class->GetName();
-		name += \" \";
+		name += " ";
 		name += temp;
 		name += GetName();
 	}
@@ -153,7 +153,7 @@ public:
 			PredefinedMethod::Inline(R"(	UObject* CreateDefaultObject()
 	{
 		static auto getDefaultObject = reinterpret_cast<UObject*(__thiscall*)(void*)>(
-			GetProcAddress(GetModuleHandleW(L\"Core.dll\"), \"?GetDefaultObject@UClass@@QAEPAVUObject@@XZ\"));
+			GetProcAddress(GetModuleHandleW(L"Core.dll"), "?GetDefaultObject@UClass@@QAEPAVUObject@@XZ"));
 		return getDefaultObject(this);
 	})")
 		};
