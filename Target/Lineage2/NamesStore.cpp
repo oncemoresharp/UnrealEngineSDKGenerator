@@ -22,6 +22,10 @@ static size_t NameStringOffset = 0x0C;
 //---------------------------------------------------------------------------
 // Validates a candidate wide ASCII string and returns its length. SEH guarded
 // so probing an unmapped address can never crash the host process.
+//
+// Used only by ProbeNameStringOffset() - the strict ASCII filter is what makes
+// the probe reliable across candidate offsets. Real name reads go through
+// SafeWideLength() so they can return non-Latin (Korean/CJK) names too.
 //---------------------------------------------------------------------------
 static bool SafeProbeWide(const void* address, size_t* outLength)
 {
@@ -45,6 +49,32 @@ static bool SafeProbeWide(const void* address, size_t* outLength)
 			}
 		}
 		return false;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
+}
+
+//---------------------------------------------------------------------------
+// SEH-guarded wide-string length scan. Accepts any character - used by the
+// per-name read so Korean/CJK entries are not stripped out as blanks.
+//---------------------------------------------------------------------------
+static bool SafeWideLength(const void* address, size_t* outLength)
+{
+	__try
+	{
+		const wchar_t* str = reinterpret_cast<const wchar_t*>(address);
+		for (size_t i = 0; i < 1024; ++i)
+		{
+			if (str[i] == 0)
+			{
+				*outLength = i;
+				return true;
+			}
+		}
+		*outLength = 1024;
+		return true;
 	}
 	__except (EXCEPTION_EXECUTE_HANDLER)
 	{
@@ -145,7 +175,7 @@ std::string NamesStore::GetById(size_t id) const
 		reinterpret_cast<unsigned char*>(entry) + NameStringOffset);
 
 	size_t length;
-	if (!SafeProbeWide(str, &length))
+	if (!SafeWideLength(str, &length) || length == 0)
 	{
 		return std::string();
 	}
