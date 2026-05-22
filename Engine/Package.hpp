@@ -42,6 +42,13 @@ private:
 	bool AddDependency(const UEObject& package) const;
 
 	/// <summary>
+	/// SEH-guarded dispatcher used by Process(). Lives in its own function so
+	/// the __try block does not collide with C++ unwinding in the caller.
+	/// Returns false when the dispatch raised an access violation.
+	/// </summary>
+	bool ProcessObjectSafe(const UEObject& obj, std::unordered_map<UEObject, bool>& processedObjects);
+
+	/// <summary>
 	/// Checks and generates the prerequisites of the object.
 	/// Should be a UEClass or UEScriptStruct.
 	/// </summary>
