@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <unordered_set>
+#include <windows.h>
 #include "tinyformat.h"
 #include "cpplinq.hpp"
 
@@ -39,6 +40,34 @@ Package::Package(const UEObject& _packageObj)
 {
 }
 
+bool Package::ProcessObjectSafe(const UEObject& obj, std::unordered_map<UEObject, bool>& processedObjects)
+{
+	__try
+	{
+		if (obj.IsA<UEEnum>())
+		{
+			GenerateEnum(obj.Cast<UEEnum>());
+		}
+		else if (obj.IsA<UEConst>())
+		{
+			GenerateConst(obj.Cast<UEConst>());
+		}
+		else if (obj.IsA<UEClass>())
+		{
+			GeneratePrerequisites(obj, processedObjects);
+		}
+		else if (obj.IsA<UEScriptStruct>())
+		{
+			GeneratePrerequisites(obj, processedObjects);
+		}
+		return true;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER)
+	{
+		return false;
+	}
+}
+
 void Package::Process(std::unordered_map<UEObject, bool>& processedObjects)
 {
 	for (auto obj : ObjectsStore())
@@ -46,21 +75,14 @@ void Package::Process(std::unordered_map<UEObject, bool>& processedObjects)
 		const auto package = obj.GetPackageObject();
 		if (packageObj == package)
 		{
-			if (obj.IsA<UEEnum>())
+			const std::string fullName = obj.GetFullName();
+
+			OutputDebugStringA(("[SDKGen] Process: " + fullName + "\n").c_str());
+
+			if (!ProcessObjectSafe(obj, processedObjects))
 			{
-				GenerateEnum(obj.Cast<UEEnum>());
-			}
-			else if (obj.IsA<UEConst>())
-			{
-				GenerateConst(obj.Cast<UEConst>());
-			}
-			else if (obj.IsA<UEClass>())
-			{
-				GeneratePrerequisites(obj, processedObjects);
-			}
-			else if (obj.IsA<UEScriptStruct>())
-			{
-				GeneratePrerequisites(obj, processedObjects);
+				OutputDebugStringA(("[SDKGen] CRASH on object: " + fullName + "\n").c_str());
+				Logger::Log("CRASH on object: %s", fullName);
 			}
 		}
 	}
@@ -497,6 +519,8 @@ void Package::GenerateMembers(const UEStruct& structObj, size_t offset, const st
 
 	for (auto&& prop : properties)
 	{
+		OutputDebugStringA(("[SDKGen]  prop: " + prop.GetFullName() + "\n").c_str());
+
 		if (offset < prop.GetOffset())
 		{
 			previousBitfieldProperty = UEBoolProperty();

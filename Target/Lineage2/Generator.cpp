@@ -1,0 +1,479 @@
+// Lineage 2 (Unreal Engine 2, license 2110) SDK generator target.
+//
+// Global arrays are resolved from Core.dll's export table instead of byte
+// patterns, and the reflection meta-class offsets are calibrated at runtime
+// against the live "Class Core.Object" data (see Calibration.cpp).
+
+#include <windows.h>
+
+#include "IGenerator.hpp"
+#include "ObjectsStore.hpp"
+#include "NamesStore.hpp"
+
+#include "Calibration.hpp"
+
+class Generator : public IGenerator
+{
+public:
+	bool Initialize(void* module) override
+	{
+		// Resolve UStruct/UField/UProperty meta-offsets from the live game.
+		if (!L2::CalibrateOffsets())
+		{
+			MessageBoxA(nullptr,
+				"Could not fully calibrate the Lineage 2 reflection offsets.\n"
+				"The generator will continue with the canonical UE2 defaults.\n"
+				"If the generated SDK looks wrong, attach a debug viewer and\n"
+				"check the [Lineage2 SDK] log lines.",
+				"Lineage 2 SDK", MB_OK | MB_ICONWARNING);
+		}
+
+		predefinedStaticMembers["Class Core.Object"] = {
+			{ "TArray<UObject*>*", "GObjects" }
+		};
+
+		predefinedMembers["Class Core.Field"] = {
+			{ "class UField*", "SuperField" },
+			{ "class UField*", "Next" },
+			{ "class UField*", "HashNext" }
+		};
+		predefinedMembers["Class Core.Struct"] = {
+			{ "unsigned char", "UnknownData00[0x08]" },
+			{ "class UField*", "Children" },
+			{ "uint32_t", "PropertySize" },
+			{ "unsigned char", "UnknownData01[0x3C]" }
+		};
+		predefinedMembers["Class Core.Function"] = {
+			{ "uint32_t", "FunctionFlags" },
+			{ "uint16_t", "iNative" },
+			{ "uint16_t", "RepOffset" },
+			{ "uint8_t", "OperPrecedence" },
+			{ "uint8_t", "NumParms" },
+			{ "uint16_t", "ParmsSize" },
+			{ "uint32_t", "ReturnValueOffset" },
+			{ "unsigned char", "UnknownData00[0x10]" },
+			{ "void*", "Func" }
+		};
+
+		// Remaining hand-coded native classes - layouts are confirmed by the
+		// GObjObjects snapshot sizes. Without these, the generator emits
+		// "UnknownData[size]" blobs because there are no UProperty registrations
+		// to walk.
+		predefinedMembers["Class Core.State"] = {
+			{ "unsigned char", "UnknownData00[0x418]" }
+		};
+		predefinedMembers["Class Core.Class"] = {
+			{ "unsigned char", "UnknownData00[0x88]" }
+		};
+		predefinedMembers["Class Core.Const"] = {
+			{ "struct FString", "Value" }
+		};
+		predefinedMembers["Class Core.Enum"] = {
+			{ "TArray<struct FName>", "Names" },
+			{ "unsigned char", "UnknownData00[0x04]" }
+		};
+		predefinedMembers["Class Core.Property"] = {
+			{ "uint32_t", "ArrayDim" },
+			{ "uint32_t", "ElementSize" },
+			{ "uint32_t", "PropertyFlags" },
+			{ "unsigned char", "UnknownData00[0x08]" },
+			{ "uint32_t", "Offset" },
+			{ "unsigned char", "UnknownData01[0x28]" }
+		};
+		predefinedMembers["Class Core.RefLinkProperty"] = {
+			{ "class UProperty*", "NextRef" }
+		};
+		predefinedMembers["Class Core.ByteProperty"] = {
+			{ "class UEnum*", "Enum" }
+		};
+		predefinedMembers["Class Core.BoolProperty"] = {
+			{ "uint32_t", "BitMask" }
+		};
+		predefinedMembers["Class Core.ObjectProperty"] = {
+			{ "class UClass*", "PropertyClass" }
+		};
+		predefinedMembers["Class Core.ClassProperty"] = {
+			{ "class UClass*", "MetaClass" }
+		};
+		predefinedMembers["Class Core.StructProperty"] = {
+			{ "class UStruct*", "Struct" }
+		};
+		predefinedMembers["Class Core.ArrayProperty"] = {
+			{ "class UProperty*", "Inner" }
+		};
+		predefinedMembers["Class Core.MapProperty"] = {
+			{ "class UProperty*", "KeyProp" },
+			{ "class UProperty*", "ValueProp" }
+		};
+		predefinedMembers["Class Core.DelegateProperty"] = {
+			{ "class UFunction*", "SignatureFunction" }
+		};
+		predefinedMembers["Class Core.FixedArrayProperty"] = {
+			{ "class UProperty*", "Inner" },
+			{ "uint32_t", "Count" }
+		};
+
+		predefinedMethods["Struct Core.Object.Color"] = {
+			PredefinedMethod::Inline(R"(	FColor()
+		: R(0), G(0), B(0), A(0)
+	{ })"),
+			PredefinedMethod::Inline(R"(	FColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a)
+		: R(r),
+		  G(g),
+		  B(b),
+		  A(a)
+	{ })")
+		};
+
+		predefinedMethods["Class Core.Object"] = {
+			PredefinedMethod::Inline(R"(	void ProcessEvent(class UFunction* function, void* parms)
+	{
+		static auto processEvent = reinterpret_cast<void(__thiscall*)(void*, class UFunction*, void*, void*)>(
+			GetProcAddress(GetModuleHandleW(L"Core.dll"), "?ProcessEvent@UObject@@UAEXPAVUFunction@@PAX1@Z"));
+		processEvent(this, function, parms, nullptr);
+	})"),
+			PredefinedMethod::Default("static TArray<UObject*>& GetGlobalObjects()", R"(TArray<UObject*>& UObject::GetGlobalObjects()
+{
+	return *GObjects;
+})"),
+			PredefinedMethod::Default("std::string GetName() const", R"(std::string UObject::GetName() const
+{
+	return Name.GetName();
+})"),
+			PredefinedMethod::Default("std::string GetFullName() const", R"(std::string UObject::GetFullName() const
+{
+	std::string name;
+
+	if (Class != nullptr)
+	{
+		std::string temp;
+		for (auto p = Outer; p; p = p->Outer)
+		{
+			temp = p->GetName() + "." + temp;
+		}
+
+		name = Class->GetName();
+		name += " ";
+		name += temp;
+		name += GetName();
+	}
+
+	return name;
+})"),
+			PredefinedMethod::Inline(R"(	template<typename T>
+	static T* FindObject(const std::string& name)
+	{
+		for (auto i = 0u; i < GetGlobalObjects().Num(); ++i)
+		{
+			auto object = GetGlobalObjects().GetByIndex(i);
+
+			if (object == nullptr)
+			{
+				continue;
+			}
+
+			if (object->GetFullName() == name)
+			{
+				return static_cast<T*>(object);
+			}
+		}
+		return nullptr;
+	})"),
+			PredefinedMethod::Inline(R"(	static UClass* FindClass(const std::string& name)
+	{
+		return FindObject<UClass>(name);
+	})"),
+			PredefinedMethod::Inline(R"(	template<typename T>
+	static T* GetObjectCasted(std::size_t index)
+	{
+		return static_cast<T*>(GetGlobalObjects().GetByIndex(index));
+	})"),
+			PredefinedMethod::Default("bool IsA(UClass* cmp) const", R"(bool UObject::IsA(UClass* cmp) const
+{
+	for (auto super = Class; super; super = static_cast<UClass*>(super->SuperField))
+	{
+		if (super == cmp)
+		{
+			return true;
+		}
+	}
+
+	return false;
+})")
+		};
+
+		predefinedMethods["Class Core.Class"] = {
+			PredefinedMethod::Inline(R"(	template<typename T>
+	T* CreateDefaultObject()
+	{
+		return static_cast<T*>(CreateDefaultObject());
+	})"),
+			PredefinedMethod::Inline(R"(	UObject* CreateDefaultObject()
+	{
+		static auto getDefaultObject = reinterpret_cast<UObject*(__thiscall*)(void*)>(
+			GetProcAddress(GetModuleHandleW(L"Core.dll"), "?GetDefaultObject@UClass@@QAEPAVUObject@@XZ"));
+		return getDefaultObject(this);
+	})")
+		};
+
+		return true;
+	}
+
+	std::string GetGameName() const override
+	{
+		return "Lineage 2";
+	}
+
+	std::string GetGameNameShort() const override
+	{
+		return "L2";
+	}
+
+	std::string GetGameVersion() const override
+	{
+		return "2110";
+	}
+
+	std::string GetNamespaceName() const override
+	{
+		return "Classes";
+	}
+
+	std::vector<std::string> GetIncludes() const override
+	{
+		return { "<windows.h>" };
+	}
+
+	std::string GetBasicDeclarations() const override
+	{
+		return R"(template<typename Fn>
+inline Fn GetVFunction(const void *instance, std::size_t index)
+{
+	auto vtable = *reinterpret_cast<const void***>(const_cast<void*>(instance));
+	return reinterpret_cast<Fn>(vtable[index]);
+}
+
+template<class T>
+struct TArray
+{
+	friend struct FString;
+
+public:
+	inline TArray()
+	{
+		Data = nullptr;
+		Count = Max = 0;
+	};
+
+	inline size_t Num() const
+	{
+		return Count;
+	};
+
+	inline T& operator[](size_t i)
+	{
+		return Data[i];
+	};
+
+	inline const T& operator[](size_t i) const
+	{
+		return Data[i];
+	};
+
+	inline bool IsValidIndex(size_t i) const
+	{
+		return i < Num();
+	}
+
+	inline T& GetByIndex(size_t i)
+	{
+		return Data[i];
+	}
+
+	inline const T& GetByIndex(size_t i) const
+	{
+		return Data[i];
+	}
+
+private:
+	T* Data;
+	int32_t Count;
+	int32_t Max;
+};
+
+struct FString : private TArray<wchar_t>
+{
+	inline FString()
+	{
+	}
+
+	FString(const wchar_t* other)
+	{
+		Max = Count = *other ? std::wcslen(other) + 1 : 0;
+
+		if (Count)
+		{
+			Data = const_cast<wchar_t*>(other);
+		}
+	};
+
+	inline bool IsValid() const
+	{
+		return Data != nullptr;
+	}
+
+	inline const wchar_t* c_str() const
+	{
+		return Data;
+	}
+
+	std::string ToString() const
+	{
+		auto length = std::wcslen(Data);
+
+		std::string str(length, '\0');
+
+		std::use_facet<std::ctype<wchar_t>>(std::locale()).narrow(Data, Data + length, '?', &str[0]);
+
+		return str;
+	}
+};
+
+template<class TEnum>
+class TEnumAsByte
+{
+public:
+	inline TEnumAsByte()
+	{
+	}
+
+	inline TEnumAsByte(TEnum _value)
+		: value(static_cast<uint8_t>(_value))
+	{
+	}
+
+	explicit inline TEnumAsByte(int32_t _value)
+		: value(static_cast<uint8_t>(_value))
+	{
+	}
+
+	explicit inline TEnumAsByte(uint8_t _value)
+		: value(_value)
+	{
+	}
+
+	inline operator TEnum() const
+	{
+		return (TEnum)value;
+	}
+
+	inline TEnum GetValue() const
+	{
+		return (TEnum)value;
+	}
+
+private:
+	uint8_t value;
+};
+
+// The wide name string sits at offset 0x0C in this client. Adjust UnknownData00
+// if a different Lineage 2 build stores it elsewhere.
+struct FNameEntry
+{
+	char UnknownData00[0x0C];
+	wchar_t Data[0x400];
+
+	std::string GetName()
+	{
+		auto length = std::wcslen(Data);
+
+		std::string str(length, '\0');
+
+		std::use_facet<std::ctype<wchar_t>>(std::locale()).narrow(Data, Data + length, '?', &str[0]);
+
+		return str;
+	}
+};
+
+struct FName
+{
+	int32_t Index;
+
+	FName()
+		: Index(0)
+	{
+	};
+
+	FName(int32_t i)
+		: Index(i)
+	{
+	};
+
+	FName(const char* nameToFind)
+		: Index(0)
+	{
+		static std::set<size_t> cache;
+
+		for (auto i : cache)
+		{
+			if (GetGlobalNames()[i]->GetName() == nameToFind)
+			{
+				Index = i;
+
+				return;
+			}
+		}
+
+		for (auto i = 0u; i < GetGlobalNames().Num(); ++i)
+		{
+			if (GetGlobalNames()[i] != nullptr)
+			{
+				if (GetGlobalNames()[i]->GetName() == nameToFind)
+				{
+					cache.insert(i);
+
+					Index = i;
+
+					return;
+				}
+			}
+		}
+	};
+
+	static TArray<FNameEntry*>* GNames;
+	static inline TArray<FNameEntry*>& GetGlobalNames()
+	{
+		return *GNames;
+	};
+
+	inline std::string GetName() const
+	{
+		return GetGlobalNames()[Index]->GetName();
+	};
+
+	inline bool operator==(const FName &other) const
+	{
+		return Index == other.Index;
+	};
+};
+
+struct FPointer
+{
+	uintptr_t Dummy;
+};
+
+struct FScriptDelegate
+{
+	unsigned char UnknownData[0x08];
+};)";
+	}
+
+	std::string GetBasicDefinitions() const override
+	{
+		return R"(TArray<FNameEntry*>* FName::GNames = nullptr;
+TArray<UObject*>* UObject::GObjects = nullptr;)";
+	}
+};
+
+Generator _generator;
+IGenerator* generator = &_generator;

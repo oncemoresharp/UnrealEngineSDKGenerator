@@ -133,6 +133,10 @@ UEProperty::Info UEProperty::GetInfo() const
 		{
 			return Cast<UEDelegateProperty>().GetInfo();
 		}
+		if (IsA<UEFixedArrayProperty>())
+		{
+			return Cast<UEFixedArrayProperty>().GetInfo();
+		}
 	}
 	return { PropertyType::Unknown };
 }
