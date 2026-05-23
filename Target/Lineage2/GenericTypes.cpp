@@ -411,3 +411,41 @@ UEClass UEDelegateProperty::StaticClass()
 	return c;
 }
 //---------------------------------------------------------------------------
+//UEFixedArrayProperty
+//---------------------------------------------------------------------------
+UEProperty UEFixedArrayProperty::GetInner() const
+{
+	return UEProperty(static_cast<UFixedArrayProperty*>(object)->Inner);
+}
+//---------------------------------------------------------------------------
+size_t UEFixedArrayProperty::GetCount() const
+{
+	return static_cast<UFixedArrayProperty*>(object)->Count;
+}
+//---------------------------------------------------------------------------
+UEProperty::Info UEFixedArrayProperty::GetInfo() const
+{
+	auto inner = GetInner().GetInfo();
+	if (inner.Type != PropertyType::Unknown)
+	{
+		extern IGenerator* generator;
+
+		const auto count = GetCount();
+		// Reported as Primitive so the generator emits "InnerType Name[Count]"
+		// without re-entering the prerequisite walk with a StructProperty cast
+		// (FixedArrayProperty's Inner sits at a different offset).
+		return Info::Create(PropertyType::Primitive,
+			inner.Size * count,
+			false,
+			generator->GetOverrideType(inner.CppType) + "[" + std::to_string(count) + "]");
+	}
+
+	return { PropertyType::Unknown };
+}
+//---------------------------------------------------------------------------
+UEClass UEFixedArrayProperty::StaticClass()
+{
+	static auto c = ObjectsStore().FindClass("Class Core.FixedArrayProperty");
+	return c;
+}
+//---------------------------------------------------------------------------

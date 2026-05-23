@@ -55,6 +55,64 @@ public:
 			{ "void*", "Func" }
 		};
 
+		// Remaining hand-coded native classes - layouts are confirmed by the
+		// GObjObjects snapshot sizes. Without these, the generator emits
+		// "UnknownData[size]" blobs because there are no UProperty registrations
+		// to walk.
+		predefinedMembers["Class Core.State"] = {
+			{ "unsigned char", "UnknownData00[0x418]" }
+		};
+		predefinedMembers["Class Core.Class"] = {
+			{ "unsigned char", "UnknownData00[0x88]" }
+		};
+		predefinedMembers["Class Core.Const"] = {
+			{ "struct FString", "Value" }
+		};
+		predefinedMembers["Class Core.Enum"] = {
+			{ "TArray<struct FName>", "Names" },
+			{ "unsigned char", "UnknownData00[0x04]" }
+		};
+		predefinedMembers["Class Core.Property"] = {
+			{ "uint32_t", "ArrayDim" },
+			{ "uint32_t", "ElementSize" },
+			{ "uint32_t", "PropertyFlags" },
+			{ "unsigned char", "UnknownData00[0x08]" },
+			{ "uint32_t", "Offset" },
+			{ "unsigned char", "UnknownData01[0x28]" }
+		};
+		predefinedMembers["Class Core.RefLinkProperty"] = {
+			{ "class UProperty*", "NextRef" }
+		};
+		predefinedMembers["Class Core.ByteProperty"] = {
+			{ "class UEnum*", "Enum" }
+		};
+		predefinedMembers["Class Core.BoolProperty"] = {
+			{ "uint32_t", "BitMask" }
+		};
+		predefinedMembers["Class Core.ObjectProperty"] = {
+			{ "class UClass*", "PropertyClass" }
+		};
+		predefinedMembers["Class Core.ClassProperty"] = {
+			{ "class UClass*", "MetaClass" }
+		};
+		predefinedMembers["Class Core.StructProperty"] = {
+			{ "class UStruct*", "Struct" }
+		};
+		predefinedMembers["Class Core.ArrayProperty"] = {
+			{ "class UProperty*", "Inner" }
+		};
+		predefinedMembers["Class Core.MapProperty"] = {
+			{ "class UProperty*", "KeyProp" },
+			{ "class UProperty*", "ValueProp" }
+		};
+		predefinedMembers["Class Core.DelegateProperty"] = {
+			{ "class UFunction*", "SignatureFunction" }
+		};
+		predefinedMembers["Class Core.FixedArrayProperty"] = {
+			{ "class UProperty*", "Inner" },
+			{ "uint32_t", "Count" }
+		};
+
 		predefinedMethods["Struct Core.Object.Color"] = {
 			PredefinedMethod::Inline(R"(	FColor()
 		: R(0), G(0), B(0), A(0)
