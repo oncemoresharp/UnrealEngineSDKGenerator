@@ -374,6 +374,20 @@ public:
 	static UEClass StaticClass();
 };
 
+// Lineage 2's Core.FixedArrayProperty - a fixed-size inline array of Inner.
+class UEFixedArrayProperty : public UEProperty
+{
+public:
+	using UEProperty::UEProperty;
+
+	UEProperty GetInner() const;
+	size_t GetCount() const;
+
+	UEProperty::Info GetInfo() const;
+
+	static UEClass StaticClass();
+};
+
 template<typename T>
 bool UEObject::IsA() const
 {

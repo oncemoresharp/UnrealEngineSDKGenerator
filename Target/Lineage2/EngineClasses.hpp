@@ -288,3 +288,11 @@ class UDelegateProperty : public URefLinkProperty
 public:
 	UFunction*		SignatureFunction;		// 0x84
 };
+
+// Core.FixedArrayProperty - body 8 bytes (Inner + Count).
+class UFixedArrayProperty : public UProperty
+{
+public:
+	UProperty*		Inner;					// 0x80
+	uint32_t		Count;					// 0x84
+};
